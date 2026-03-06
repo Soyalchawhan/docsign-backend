@@ -129,10 +129,78 @@ router.post('/finalize/:docId', protect, async (req, res) => {
       if (!page) continue
 
       const { width: pageWidth, height: pageHeight } = page.getSize()
+
       const x = (sig.x / 100) * pageWidth
       const y = pageHeight - ((sig.y / 100) * pageHeight) - ((sig.height / 100) * pageHeight)
       const w = (sig.width / 100) * pageWidth
       const h = (sig.height / 100) * pageHeight
+
+      page.drawRectangle({
+        x, y, width: w, height: h,
+        borderColor: rgb(0.2, 0.4, 0.8),
+        borderWidth: 1.5,
+        color: rgb(0.95, 0.97, 1)
+      })
+
+      const sigText = sig.signatureText || sig.signerName
+      const fontSize = Math.min(12, h * 0.35)
+      const smallFontSize = Math.min(7, h * 0.18)
+
+      page.drawText(sigText, {
+        x: x + 4,
+        y: y + h - fontSize - 2,
+        size: fontSize,
+        font: boldFont,
+        color: rgb(0.1, 0.2, 0.6)
+      })
+
+      page.drawText(`Name: ${sig.signerName}`, {
+        x: x + 4,
+        y: y + h - fontSize - smallFontSize - 4,
+        size: smallFontSize,
+        font,
+        color: rgb(0.3, 0.3, 0.3)
+      })
+
+      if (sig.signerRole) {
+        page.drawText(`Role: ${sig.signerRole}`, {
+          x: x + 4,
+          y: y + h - fontSize - (smallFontSize * 2) - 6,
+          size: smallFontSize,
+          font,
+          color: rgb(0.3, 0.3, 0.3)
+        })
+      }
+
+      const dateStr = sig.signedAt
+        ? new Date(sig.signedAt).toLocaleDateString()
+        : new Date().toLocaleDateString()
+
+      page.drawText(`Date: ${dateStr}`, {
+        x: x + 4,
+        y: y + 3,
+        size: smallFontSize,
+        font,
+        color: rgb(0.4, 0.4, 0.4)
+      })
+    }
+
+    const signedDir = path.join(process.env.UPLOADS_DIR || 'uploads', 'signed')
+    if (!fs.existsSync(signedDir)) fs.mkdirSync(signedDir, { recursive: true })
+
+    const signedFilename = `signed-${doc.filename}`
+    const signedPath = path.join(signedDir, signedFilename)
+    fs.writeFileSync(signedPath, await pdfDoc.save())
+
+    doc.signedFilePath = signedPath
+    await doc.save()
+
+    await createAuditLog(req, 'signed_pdf_generated', doc._id, req.user)
+    res.json({ message: 'Signed PDF generated', signedFilename })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
 
       // Draw signature box
       page.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.2, 0.4, 0.8), borderWidth: 1.5, color: rgb(0.95, 0.97, 1) })

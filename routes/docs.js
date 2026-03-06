@@ -3,7 +3,7 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import Document from '../models/Document.js'
+import DocModel from '../models/Document.js'
 import Signature from '../models/Signature.js'
 import { protect, optionalAuth } from '../middleware/auth.js'
 import { createAuditLog } from '../middleware/audit.js'
@@ -39,7 +39,7 @@ router.post('/upload', protect, upload.single('pdf'), async (req, res) => {
       parsedSigners = typeof signers === 'string' ? JSON.parse(signers) : signers
     }
 
-    const doc = await Document.create({
+    const doc = await DocModel.create({
       title,
       filename: req.file.filename,
       filePath: req.file.path,
@@ -66,7 +66,7 @@ router.get('/', protect, async (req, res) => {
     const query = { owner: req.user._id }
     if (status) query.status = status
     if (search) query.title = { $regex: search, $options: 'i' }
-    const docs = await Document.find(query).sort({ createdAt: -1 })
+    const docs = await DocModel.find(query).sort({ createdAt: -1 })
     res.json({ docs })
   } catch (err) {
     res.status(500).json({ message: err.message })
@@ -76,7 +76,7 @@ router.get('/', protect, async (req, res) => {
 // Get single document
 router.get('/:id', protect, async (req, res) => {
   try {
-    const doc = await Document.findOne({ _id: req.params.id, owner: req.user._id })
+    const doc = await DocModel.findOne({ _id: req.params.id, owner: req.user._id })
     if (!doc) return res.status(404).json({ message: 'Document not found' })
     await createAuditLog(req, 'document_viewed', doc._id, req.user)
     res.json({ doc })
@@ -88,7 +88,7 @@ router.get('/:id', protect, async (req, res) => {
 // Get document by share token (public)
 router.get('/public/:token', optionalAuth, async (req, res) => {
   try {
-    const doc = await Document.findOne({ 'signers.shareToken': req.params.token })
+    const doc = await DocModel.findOne({ 'signers.shareToken': req.params.token })
     if (!doc) return res.status(404).json({ message: 'Document not found' })
 
     const signer = doc.signers.find(s => s.shareToken === req.params.token)
@@ -108,7 +108,7 @@ router.get('/public/:token', optionalAuth, async (req, res) => {
 router.post('/:id/share', protect, async (req, res) => {
   try {
     const { expiryDays = 7 } = req.body
-    const doc = await Document.findOne({ _id: req.params.id, owner: req.user._id })
+    const doc = await DocModel.findOne({ _id: req.params.id, owner: req.user._id })
     if (!doc) return res.status(404).json({ message: 'Document not found' })
 
     const expiry = new Date()
@@ -141,7 +141,7 @@ router.post('/:id/share', protect, async (req, res) => {
 // Update document
 router.patch('/:id', protect, async (req, res) => {
   try {
-    const doc = await Document.findOneAndUpdate(
+    const doc = await DocModel.findOneAndUpdate(
       { _id: req.params.id, owner: req.user._id },
       req.body,
       { new: true }
@@ -156,7 +156,7 @@ router.patch('/:id', protect, async (req, res) => {
 // Delete document
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const doc = await Document.findOneAndDelete({ _id: req.params.id, owner: req.user._id })
+    const doc = await DocModel.findOneAndDelete({ _id: req.params.id, owner: req.user._id })
     if (!doc) return res.status(404).json({ message: 'Document not found' })
     if (fs.existsSync(doc.filePath)) fs.unlinkSync(doc.filePath)
     if (doc.signedFilePath && fs.existsSync(doc.signedFilePath)) fs.unlinkSync(doc.signedFilePath)
@@ -170,7 +170,7 @@ router.delete('/:id', protect, async (req, res) => {
 // Download document
 router.get('/:id/download', protect, async (req, res) => {
   try {
-    const doc = await Document.findOne({ _id: req.params.id, owner: req.user._id })
+    const doc = await DocModel.findOne({ _id: req.params.id, owner: req.user._id })
     if (!doc) return res.status(404).json({ message: 'Document not found' })
     const filePath = req.query.signed === 'true' && doc.signedFilePath ? doc.signedFilePath : doc.filePath
     await createAuditLog(req, 'document_downloaded', doc._id, req.user)

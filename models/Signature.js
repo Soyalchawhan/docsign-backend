@@ -1,61 +1,22 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose'
 
 const signatureSchema = new mongoose.Schema({
-  document: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Document',
-    required: true
-  },
-  signer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
-  signerName: {
-    type: String,
-    required: true
-  },
-  signerEmail: {
-    type: String,
-    required: true
-  },
-  // Position coordinates (as percentage of page dimensions for responsiveness)
+  document: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', required: true },
+  signerEmail: { type: String, required: true },
+  signerName: { type: String, required: true },
+  signerRole: { type: String, default: '' },
   x: { type: Number, required: true },
   y: { type: Number, required: true },
-  width: { type: Number, default: 200 },
-  height: { type: Number, default: 60 },
+  width: { type: Number, default: 20 },
+  height: { type: Number, default: 8 },
   page: { type: Number, default: 1 },
-  // Signature data
-  signatureType: {
-    type: String,
-    enum: ['typed', 'drawn', 'initials'],
-    default: 'typed'
-  },
-  signatureData: {
-    type: String, // Base64 image for drawn, text for typed
-    default: null
-  },
-  signatureText: {
-    type: String,
-    default: null
-  },
-  status: {
-    type: String,
-    enum: ['placed', 'signed', 'rejected'],
-    default: 'placed'
-  },
-  rejectionReason: {
-    type: String,
-    default: null
-  },
-  signedAt: {
-    type: Date,
-    default: null
-  },
-  ipAddress: {
-    type: String,
-    default: null
-  }
-}, { timestamps: true });
+  signatureType: { type: String, enum: ['typed', 'drawn', 'initials'], default: 'typed' },
+  signatureData: { type: String },
+  signatureText: { type: String },
+  status: { type: String, enum: ['placed', 'signed', 'rejected'], default: 'placed' },
+  rejectionReason: { type: String },
+  signedAt: { type: Date },
+  ipAddress: { type: String },
+}, { timestamps: true })
 
-module.exports = mongoose.model('Signature', signatureSchema);
+export default mongoose.model('Signature', signatureSchema)

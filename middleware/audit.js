@@ -1,26 +1,20 @@
-const AuditLog = require('../models/AuditLog');
+import AuditLog from '../models/AuditLog.js'
 
-const createAuditLog = async ({ document, action, actor, actorName, actorEmail, req, metadata = {} }) => {
+export const createAuditLog = async (req, action, documentId, user, actorEmail = null) => {
   try {
-    const ipAddress = req?.headers['x-forwarded-for']?.split(',')[0] || 
-                      req?.connection?.remoteAddress || 
-                      req?.socket?.remoteAddress || 
-                      'unknown';
-    const userAgent = req?.headers['user-agent'] || 'unknown';
+    const ipAddress = req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown'
+    const userAgent = req.headers?.['user-agent'] || ''
 
     await AuditLog.create({
-      document,
+      document: documentId,
       action,
-      actor: actor?._id || actor || null,
-      actorName: actorName || actor?.name || 'Anonymous',
-      actorEmail: actorEmail || actor?.email || null,
+      actor: user?._id || null,
+      actorName: user?.name || actorEmail || 'Anonymous',
+      actorEmail: user?.email || actorEmail || '',
       ipAddress,
-      userAgent,
-      metadata
-    });
-  } catch (error) {
-    console.error('Audit log error:', error.message);
+      userAgent
+    })
+  } catch (err) {
+    console.error('Audit log error:', err.message)
   }
-};
-
-module.exports = { createAuditLog };
+}

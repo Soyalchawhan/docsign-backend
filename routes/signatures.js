@@ -129,11 +129,11 @@ router.post('/finalize/:docId', protect, async (req, res) => {
 
       const { width: pageWidth, height: pageHeight } = page.getSize()
 
-      const x = (sig.x / 100) * pageWidth
-      const y = pageHeight - ((sig.y / 100) * pageHeight) - ((sig.height / 100) * pageHeight)
       const w = (sig.width / 100) * pageWidth
       const h = (sig.height / 100) * pageHeight
-
+      const x = (sig.x / 100) * pageWidth
+      const y = pageHeight - ((sig.y / 100) * pageHeight) - h
+      console.log(`Sig for ${sig.signerName}: x=${x.toFixed(1)} y=${y.toFixed(1)} w=${w.toFixed(1)} h=${h.toFixed(1)} pageH=${pageHeight}`)
       page.drawRectangle({
         x,
         y,

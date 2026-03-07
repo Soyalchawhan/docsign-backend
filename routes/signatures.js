@@ -123,69 +123,72 @@ router.post('/finalize/:docId', protect, async (req, res) => {
     const pages = pdfDoc.getPages()
 
     for (const sig of signatures) {
-      const pageIndex = (sig.page || 1) - 1
-      const page = pages[pageIndex]
-      if (!page) continue
+  const pageIndex = (sig.page || 1) - 1
+  const page = pages[pageIndex]
+  if (!page) continue
 
-      const { width: pageWidth, height: pageHeight } = page.getSize()
+  const { width: pageWidth, height: pageHeight } = page.getSize()
 
-      const w = (sig.width / 100) * pageWidth
-      const h = (sig.height / 100) * pageHeight
-      const x = (sig.x / 100) * pageWidth
-      const y = pageHeight - ((sig.y / 100) * pageHeight) - h
-      console.log(`Sig for ${sig.signerName}: x=${x.toFixed(1)} y=${y.toFixed(1)} w=${w.toFixed(1)} h=${h.toFixed(1)} pageH=${pageHeight}`)
-      page.drawRectangle({
-        x,
-        y,
-        width: w,
-        height: h,
-        borderColor: rgb(0.2, 0.4, 0.8),
-        borderWidth: 1.5,
-        color: rgb(0.95, 0.97, 1)
-      })
+  // Convert percentage to PDF points
+  const x = (sig.x / 100) * pageWidth
+  const w = (sig.width / 100) * pageWidth
+  const h = (sig.height / 100) * pageHeight
+  // PDF y-axis is bottom-up, browser is top-down
+  const y = pageHeight - ((sig.y / 100) * pageHeight) - h
 
-      const sigText = sig.signatureText || sig.signerName
-      const fontSize = Math.min(12, h * 0.35)
-      const smallFontSize = Math.min(7, h * 0.18)
+  console.log(`SIGN: ${sig.signerName} x=${x.toFixed(0)} y=${y.toFixed(0)} w=${w.toFixed(0)} h=${h.toFixed(0)} page=${pageWidth}x${pageHeight}`)
 
-      page.drawText(sigText, {
-        x: x + 4,
-        y: y + h - fontSize - 2,
-        size: fontSize,
-        font: boldFont,
-        color: rgb(0.1, 0.2, 0.6)
-      })
+  // Draw white background box
+  page.drawRectangle({
+    x: x,
+    y: y,
+    width: w,
+    height: h,
+    color: rgb(1, 1, 0.8),
+    borderColor: rgb(0, 0, 1),
+    borderWidth: 2,
+    opacity: 1
+  })
 
-      page.drawText(`Name: ${sig.signerName}`, {
-        x: x + 4,
-        y: y + h - fontSize - smallFontSize - 4,
-        size: smallFontSize,
-        font,
-        color: rgb(0.3, 0.3, 0.3)
-      })
+  // Large visible signature text
+  page.drawText(sig.signatureText || sig.signerName, {
+    x: x + 2,
+    y: y + h - 14,
+    size: 10,
+    font: boldFont,
+    color: rgb(0, 0, 0.8),
+    opacity: 1
+  })
 
-      if (sig.signerRole) {
-        page.drawText(`Role: ${sig.signerRole}`, {
-          x: x + 4,
-          y: y + h - fontSize - (smallFontSize * 2) - 6,
-          size: smallFontSize,
-          font,
-          color: rgb(0.3, 0.3, 0.3)
-        })
-      }
+  page.drawText(sig.signerName, {
+    x: x + 2,
+    y: y + h - 24,
+    size: 7,
+    font: font,
+    color: rgb(0, 0, 0),
+    opacity: 1
+  })
 
-      const dateStr = sig.signedAt
-        ? new Date(sig.signedAt).toLocaleDateString()
-        : new Date().toLocaleDateString()
+  if (sig.signerRole) {
+    page.drawText(sig.signerRole, {
+      x: x + 2,
+      y: y + h - 32,
+      size: 7,
+      font: font,
+      color: rgb(0.2, 0.2, 0.2),
+      opacity: 1
+    })
+  }
 
-      page.drawText(`Date: ${dateStr}`, {
-        x: x + 4,
-        y: y + 3,
-        size: smallFontSize,
-        font,
-        color: rgb(0.4, 0.4, 0.4)
-      })
-    }
+  page.drawText(new Date(sig.signedAt || Date.now()).toLocaleDateString(), {
+    x: x + 2,
+    y: y + 3,
+    size: 6,
+    font: font,
+    color: rgb(0.3, 0.3, 0.3),
+    opacity: 1
+  })
+}
 
     const signedDir = path.join(process.env.UPLOADS_DIR || 'uploads', 'signed')
     if (!fs.existsSync(signedDir)) fs.mkdirSync(signedDir, { recursive: true })
